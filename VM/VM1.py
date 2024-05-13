@@ -75,19 +75,19 @@ def push():
     return pushInstruction
 
 def pop():
-    popInstruction = "@SP\nA=M\nD=M"
+    popInstruction = "@SP\nA=M\nD=M\n"
     return popInstruction
 
 def pushSegment(number, segment):
-    pushSegmentInstruction = f"@{number}\nD=A\n@{segment}\nA=M\nA=D+M\nD=M"
+    pushSegmentInstruction = f"@{number}\nD=A\n@{segment}\nA=M\nA=D+M\nD=M\n"
     return pushSegmentInstruction
 
 def popSegment(number, segment):
-    popSegmentInstruction = f"@{number}\nD=A\n@{segment}\nD=D+M\n@R13\nM=D"
+    popSegmentInstruction = f"@{number}\nD=A\n@{segment}\nD=D+M\n@R13\nM=D\n"
     return popSegmentInstruction
 
 def pushPointer(segment):
-    pushPointerInstruction = f"@{segment}\nA=M\nD=M"
+    pushPointerInstruction = f"@{segment}\nA=M\nD=M\n"
     return pushPointerInstruction
 
 def popPointer(segment):
@@ -168,14 +168,35 @@ class CodeWriter:
 
     def writePushPop(self, command, segment, index):
         if command == "C_PUSH" and segment == "local" or segment == "argument" or segment == "this" or segment == "that":
+            pushSegInstruct = pushSegment(index, segment)
+            pushInstruct = push()
+            pushSegmentInstruct = pushSegInstruct + pushInstruct
+            pushSegmentInstruct = pushSegmentInstruct.splitlines()
+            self.fs.write(pushSegmentInstruct + "\n")
 
         if command == "C_PUSH" and segment == "pointer":
+            pushPointInstruct = pushPointer(segment)
+            pushInstr = push()
+            pushPointerInstruct = pushPointInstruct + pushInstr
+            pushPointerInstruct = pushPointerInstruct.splitlines()
+            self.fs.write(pushPointerInstruct + "\n")
 
         if command == "C_POP" and segment == "local" or segment == "argument" or segment == "this" or segment == "that":
+            popSegInstruct = popSegment(index, segment)
+            popInstruct = pop()
+            continuedInstruct = "@R13\nA=M\nM=D\n@SP\nM=M-1"
+            popSegmentInstruct = popSegInstruct + popInstruct + continuedInstruct
+            popSegmentInstruct = popSegmentInstruct.splitlines()
+            self.fs.write(popSegmentInstruct + "\n")
 
         if command == "C_POP" and segment == "pointer":
-
+            popInstr = pop()
+            popPointInstruct = popPointer(segment)
+            popPointerInstruct = popInstr + popPointInstruct
+            popPointerInstruct = popPointerInstruct.splitlines()
+            self.fs.write(popPointerInstruct + "\n")
             
+        # write infinite loop to close out assembly progam.
     def close(self):
         self.fs.close()
 
