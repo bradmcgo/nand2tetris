@@ -50,13 +50,10 @@ class Parser:
             return "C_POP"
         
     def arg1(self):
-        print("self.current_instruction1:", self.current_instruction)
-        print("self.instruction_type1:", self.instruction_type)
         if self.instruction_type == "C_ARITHMETIC":
             return self.current_instruction
         else:    
             arg1Text = self.current_instruction.split()
-            print("arg1Text:", arg1Text)
             # return up to the equals.
             if len(arg1Text) >= 2:
                 return str(arg1Text[1])
@@ -64,11 +61,8 @@ class Parser:
                 return "Not enough arguments in arithmetic command."
 
     def arg2(self):
-        print("self.current_instruction2:", self.current_instruction)
-        print("self.instruction_type2:", self.instruction_type)
         if self.instruction_type == "C_PUSH" or self.instruction_type == "C_POP":
             arg2Text = self.current_instruction.split()
-            print("arg2Text:", arg2Text)
             if len(arg2Text) >= 3:
                     return int(arg2Text[2])
             else:
@@ -90,7 +84,6 @@ def pushSegment(number, segment):
         "that": "THAT"
     }
     push_segment_code = segment_map.get(segment, segment)
-    print("push_segment_code:", push_segment_code)
     pushSegmentInstruction = f"@{number}\nD=A\n@R13\nM=D\n@{push_segment_code}\nD=M\n@R13\nD=D+M\n\nA=D\nD=M\n"
     return pushSegmentInstruction
 
@@ -102,7 +95,6 @@ def popSegment(number, segment):
         "that": "THAT"
     }
     pop_segment_code = segment_map.get(segment, segment)
-    print("pop_segment_code:", pop_segment_code)
     popSegmentInstruction = f"@{number}\nD=A\n@{pop_segment_code}\nD=D+M\n@R13\nM=D\n"
     return popSegmentInstruction
 
@@ -348,7 +340,6 @@ def main():
     with open(filename, 'r') as file:
         text = file.read()
         parser = Parser(text)
-        lineNumber = 0
 
         while parser.hasMoreLines():
             parser.advance()
