@@ -1,4 +1,5 @@
 import sys
+import os
 
 class Parser:
     def __init__(self, text):
@@ -41,18 +42,21 @@ class Parser:
         if self.current_instruction == "add" or self.current_instruction == "sub" or self.current_instruction == "neg" or self.current_instruction == "eq" or self.current_instruction == "gt" or self.current_instruction == "lt" or self.current_instruction == "and" or self.current_instruction == "or" or self.current_instruction == "not":
             self.instruction_type = "C_ARITHMETIC"
             return "C_ARITHMETIC"
-        if self.current_instruction.startswith("push"):
+        if self.current_instruction.startswith("push "):
             self.instruction_type = "C_PUSH"
             return "C_PUSH"
-        if self.current_instruction.startswith("pop"):
+        if self.current_instruction.startswith("pop "):
             self.instruction_type = "C_POP"
             return "C_POP"
         
     def arg1(self):
+        print("self.current_instruction1:", self.current_instruction)
+        print("self.instruction_type1:", self.instruction_type)
         if self.instruction_type == "C_ARITHMETIC":
             return self.current_instruction
         else:    
             arg1Text = self.current_instruction.split()
+            print("arg1Text:", arg1Text)
             # return up to the equals.
             if len(arg1Text) >= 2:
                 return str(arg1Text[1])
@@ -60,13 +64,13 @@ class Parser:
                 return "Not enough arguments in arithmetic command."
 
     def arg2(self):
+        print("self.current_instruction2:", self.current_instruction)
+        print("self.instruction_type2:", self.instruction_type)
         if self.instruction_type == "C_PUSH" or self.instruction_type == "C_POP":
-            arg2Text = self.current_instruction
+            arg2Text = self.current_instruction.split()
+            print("arg2Text:", arg2Text)
             if len(arg2Text) >= 3:
-                try:
                     return int(arg2Text[2])
-                except ValueError:
-                    print("The string does not contain a valid integer.")
             else:
                 return "Not enough arguments in push/pop command or this is not a push/pop command."
 
@@ -75,27 +79,43 @@ def push():
     return pushInstruction
 
 def pop():
-    popInstruction = "@SP\nA=M\nD=M\n"
+    popInstruction = "@SP\nA=M-1\nD=M\nM=0\n"
     return popInstruction
 
 def pushSegment(number, segment):
-    pushSegmentInstruction = f"@{number}\nD=A\n@{segment}\nA=M\nA=D+M\nD=M\n"
+    segment_map = {
+        "local": "LCL",
+        "argument": "ARG",
+        "this": "THIS",
+        "that": "THAT"
+    }
+    push_segment_code = segment_map.get(segment, segment)
+    print("push_segment_code:", push_segment_code)
+    pushSegmentInstruction = f"@{number}\nD=A\n@R13\nM=D\n@{push_segment_code}\nD=M\n@R13\nD=D+M\n\nA=D\nD=M\n"
     return pushSegmentInstruction
 
 def popSegment(number, segment):
-    popSegmentInstruction = f"@{number}\nD=A\n@{segment}\nD=D+M\n@R13\nM=D\n"
+    segment_map = {
+        "local": "LCL",
+        "argument": "ARG",
+        "this": "THIS",
+        "that": "THAT"
+    }
+    pop_segment_code = segment_map.get(segment, segment)
+    print("pop_segment_code:", pop_segment_code)
+    popSegmentInstruction = f"@{number}\nD=A\n@{pop_segment_code}\nD=D+M\n@R13\nM=D\n"
     return popSegmentInstruction
 
 def pushPointer(segment):
-    pushPointerInstruction = f"@{segment}\nA=M\nD=M\n"
+    pushPointerInstruction = f"@{segment}\nD=M\n"
     return pushPointerInstruction
 
 def popPointer(segment):
-    popPointerInstruction = f"@{segment}\nA=M\nM=D\n@SP\nM=M-1"
+    popPointerInstruction = f"@{segment}\nM=D\n@SP\nM=M-1"
     return popPointerInstruction
 
 def popArithmetic():
-    popArithmeticInstruction = "@SP\nA=M\nD=M\n@R13\nM=D\n@SP\nM=M-1\nA=M\nD=M\n@R14\nM=D\n@SP\nM=M-1\n"
+    popArithmeticInstruction = "@SP\nA=M-1\nD=M\nM=0\n@R13\nM=D\n@SP\nM=M-1\n@SP\nA=M-1\nD=M\nM=0\n@R14\nM=D\n@SP\nM=M-1\n"
     return popArithmeticInstruction
 
 def addSubAndOr(operation):
@@ -103,12 +123,41 @@ def addSubAndOr(operation):
     return addSubAndOrInstruct
 
 def eqGtLt(operation):
-    eqGtLtInstruct = f"@R13\nD=M\n@R14\nD=D-M\n@END\n{operation}\n@SP\nA=M\nM=0\n@SP\nM=M+1\n(END)\n@SP\nA=M\nM=1\n@SP\nM=M+1"
+    if not hasattr(eqGtLt, 'counter'):
+        eqGtLt.counter = 0
+    eqGtLt.counter += 1
+    end_label = f"END{eqGtLt.counter}"
+    end_jump_label = f"(END{eqGtLt.counter})"
+    done_label = f"DONE{eqGtLt.counter}"
+    done_jump_label = f"(DONE{eqGtLt.counter})"
+    eqGtLtInstruct = f"@R13\nD=M\n@R14\nD=D-M\n@{end_label}\n{operation}\n@SP\nA=M\nM=0\n@SP\nM=M+1\n@{done_label}\nD;JMP\n{end_jump_label}\n@SP\nA=M\nM=-1\n@SP\nM=M+1\n{done_jump_label}"
     return eqGtLtInstruct
 
 def negNot(operation):
-    negNotInstruct = f"@SP\nA=M\nD=M\n@SP\nM=M-1\nD={operation}\n@SP\nA=M\nM=D\n@SP\nM=M+1"
+    negNotInstruct = f"@SP\nA=M-1\nD=M\nM=0\n@SP\nM=M-1\nD={operation}\n@SP\nA=M\nM=D\n@SP\nM=M+1"
     return negNotInstruct
+
+def constant(number):
+    constantInstruct = f"@{number}\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1"
+    return constantInstruct
+
+def staticPop(filename, number):
+    staticInstruct = f"@SP\nA=M-1\nD=M\nM=0\n@{filename}.{number}\nM=D\n@SP\nM=M-1"
+    return staticInstruct
+
+def staticPush(filename, number):
+    staticInstruct = f"@{filename}.{number}\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1"
+    return staticInstruct
+
+def tempPush(tempPushNum):
+    tempPushNumber = str(tempPushNum + 5)
+    tempPushInstruct = f"@R{tempPushNumber}\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1"
+    return tempPushInstruct
+
+def tempPop(tempPopNum):
+    tempPopNumber = str(tempPopNum + 5)
+    tempPopInstruct = f"@SP\nA=M-1\nD=M\nM=0\n@R{tempPopNumber}\nM=D\n@SP\nM=M-1"
+    return tempPopInstruct
 
 def fin():
     finInstruct = "@FIN\n0;JMP"
@@ -117,95 +166,184 @@ def fin():
 class CodeWriter:
     def __init__(self, outputFile):
         self.outputFile = outputFile
-        self.fs = open(self.outputFile + ".asm","a")
-
+        #self.fs = open(self.outputFile + ".asm","a")
+        # stackInit = "@256\nD=A\n@SP\nM=D\n"
+        # self.outputFile.write("//Initialize stack" + "\n")
+        # self.outputFile.writelines([stackInit])
     
     def writeArithmetic(self, command):
         popArith = str(popArithmetic())
         if command == "add":
             addInstruct = "D+M"
-            addString = str(addSubAndOr(addInstruct))
-            arithmeticAssemblyAdd = popArith + addString
+            addString = addSubAndOr(addInstruct)
+            arithmeticAssemblyAdd = popArith + addString + "\n"
             arithmeticAssemblyAdd = arithmeticAssemblyAdd.splitlines()
-            self.fs.write(arithmeticAssemblyAdd + "\n")
+            self.outputFile.write("//" + f"{command} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in arithmeticAssemblyAdd])
+
         if command == "sub":
-            subInstruct = "D-M"
-            subString = str(addSubAndOr(subInstruct))
-            arithmeticAssemblySub = popArith + subString
+            subInstruct = "M-D"
+            subString = addSubAndOr(subInstruct)
+            arithmeticAssemblySub = popArith + subString + "\n"
             arithmeticAssemblySub = arithmeticAssemblySub.splitlines()
-            self.fs.write(arithmeticAssemblySub + "\n")
+            self.outputFile.write("//" + f"{command} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in arithmeticAssemblySub])
+
         if command == "and":
             andInstruct = "D&M"
             andString = addSubAndOr(andInstruct)
-            arithmeticAssemblyAnd = popArith + andString
+            arithmeticAssemblyAnd = popArith + andString + "\n"
             arithmeticAssemblyAnd = arithmeticAssemblyAnd.splitlines()
-            self.fs.write(arithmeticAssemblyAnd + "\n")
+            self.outputFile.write("//" + f"{command} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in arithmeticAssemblyAnd])
+
         if command == "or":
             orInstruct = "D|M"
             orString = addSubAndOr(orInstruct)
-            arithmeticAssemblyOr = popArith + orString
+            arithmeticAssemblyOr = popArith + orString + "\n"
             arithmeticAssemblyOr = arithmeticAssemblyOr.splitlines()
-            self.fs.write(arithmeticAssemblyOr + "\n")
+            self.outputFile.write("//" + f"{command} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in arithmeticAssemblyOr])
+
         if command == "gt":
-            gtInstruct = "D;JGT"
+            gtInstruct = "D;JLT"
             gtString = eqGtLt(gtInstruct)
-            arithmeticAssemblyGt = popArith + gtString
+            arithmeticAssemblyGt = popArith + gtString + "\n"
             arithmeticAssemblyGt = arithmeticAssemblyGt.splitlines()
-            self.fs.write(arithmeticAssemblyGt + "\n")
+            self.outputFile.write("//" + f"{command} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in arithmeticAssemblyGt])
+
         if command == "lt":
-            ltInstruct = "D;JLT"
+            ltInstruct = "D;JGT"
             ltString = eqGtLt(ltInstruct)
-            arithmeticAssemblyLt = popArith + ltString
+            arithmeticAssemblyLt = popArith + ltString + "\n"
             arithmeticAssemblyLt = arithmeticAssemblyLt.splitlines()
-            self.fs.write(arithmeticAssemblyLt + "\n")
+            self.outputFile.write("//" + f"{command} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in arithmeticAssemblyLt])
+
         if command == "eq":
             eqInstruct = "D;JEQ"
             eqString = eqGtLt(eqInstruct)
-            arithmeticAssemblyEq = popArith + eqString
+            arithmeticAssemblyEq = popArith + eqString + "\n"
             arithmeticAssemblyEq = arithmeticAssemblyEq.splitlines()
-            self.fs.write(arithmeticAssemblyEq + "\n")
+            self.outputFile.write("//" + f"{command} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in arithmeticAssemblyEq])
+
+        if command == "neg":
+            negInstruct = "-D"
+            negString = negNot(negInstruct)
+            arithmeticAssemblyNeg = negString + "\n"
+            arithmeticAssemblyNeg = arithmeticAssemblyNeg.splitlines()
+            self.outputFile.write("//" + f"{command} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in arithmeticAssemblyNeg])
+
+        if command == "not":
+            notInstruct = "!D"
+            notString = negNot(notInstruct)
+            arithmeticAssemblyNot = notString + "\n"
+            arithmeticAssemblyNot = arithmeticAssemblyNot.splitlines()
+            self.outputFile.write("//" + f"{command} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in arithmeticAssemblyNot])
 
 
     def writePushPop(self, command, segment, index):
-        if command == "C_PUSH" and segment == "local" or segment == "argument" or segment == "this" or segment == "that":
+        if command == "C_PUSH" and segment == "local" or command == "C_PUSH" and segment == "argument" or command == "C_PUSH" and segment == "this" or command == "C_PUSH" and segment == "that":
             pushSegInstruct = pushSegment(index, segment)
             pushInstruct = push()
-            pushSegmentInstruct = pushSegInstruct + pushInstruct
+            pushSegmentInstruct = pushSegInstruct + pushInstruct + "\n"
             pushSegmentInstruct = pushSegmentInstruct.splitlines()
-            self.fs.write(pushSegmentInstruct + "\n")
+            self.outputFile.write("//push " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in pushSegmentInstruct])
 
-        if command == "C_PUSH" and segment == "pointer":
-            pushPointInstruct = pushPointer(segment)
-            pushInstr = push()
-            pushPointerInstruct = pushPointInstruct + pushInstr
-            pushPointerInstruct = pushPointerInstruct.splitlines()
-            self.fs.write(pushPointerInstruct + "\n")
-
-        if command == "C_POP" and segment == "local" or segment == "argument" or segment == "this" or segment == "that":
+        if command == "C_POP" and segment == "local" or command == "C_POP" and segment == "argument" or command == "C_POP" and segment == "this" or command == "C_POP" and segment == "that":
             popSegInstruct = popSegment(index, segment)
             popInstruct = pop()
             continuedInstruct = "@R13\nA=M\nM=D\n@SP\nM=M-1"
-            popSegmentInstruct = popSegInstruct + popInstruct + continuedInstruct
+            popSegmentInstruct = popSegInstruct + popInstruct + continuedInstruct + "\n"
             popSegmentInstruct = popSegmentInstruct.splitlines()
-            self.fs.write(popSegmentInstruct + "\n")
+            self.outputFile.write("//pop " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in popSegmentInstruct])
 
-        if command == "C_POP" and segment == "pointer":
+        if command == "C_PUSH" and segment == "pointer" and index == 0:
+            pushPointInstruct = pushPointer("THIS")
+            pushInstr = push()
+            pushPointerInstruct = pushPointInstruct + pushInstr + "\n"
+            pushPointerInstruct = pushPointerInstruct.splitlines()
+            self.outputFile.write("//push " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in pushPointerInstruct])
+
+        if command == "C_PUSH" and segment == "pointer" and index == 1:
+            pushPointInstruct = pushPointer("THAT")
+            pushInstr = push()
+            pushPointerInstruct = pushPointInstruct + pushInstr + "\n"
+            pushPointerInstruct = pushPointerInstruct.splitlines()
+            self.outputFile.write("//push " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in pushPointerInstruct])
+
+        if command == "C_POP" and segment == "pointer" and index == 0:
             popInstr = pop()
-            popPointInstruct = popPointer(segment)
-            popPointerInstruct = popInstr + popPointInstruct
+            popPointInstruct = popPointer("THIS")
+            popPointerInstruct = popInstr + popPointInstruct + "\n"
             popPointerInstruct = popPointerInstruct.splitlines()
-            self.fs.write(popPointerInstruct + "\n")
-            
-        # write infinite loop to close out assembly progam.
-    def close(self):
-        self.fs.close()
+            self.outputFile.write("//pop " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in popPointerInstruct])
 
+        if command == "C_POP" and segment == "pointer" and index == 1:
+            popInstr = pop()
+            popPointInstruct = popPointer("THAT")
+            popPointerInstruct = popInstr + popPointInstruct + "\n"
+            popPointerInstruct = popPointerInstruct.splitlines()
+            self.outputFile.write("//pop " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in popPointerInstruct])
+
+        if command == "C_PUSH" and segment == "constant":
+            pushConstInstruct = constant(index)
+            pushConstantInstruct = pushConstInstruct + "\n"
+            pushConstantInstruct = pushConstantInstruct.splitlines()
+            self.outputFile.write("//push " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in pushConstantInstruct])
+
+        if command == "C_PUSH" and segment == "static":
+            popStatInstruct = staticPush(filenameNoPath, index)
+            popStaticInstruct = popStatInstruct + "\n"
+            popStaticInstruct = popStaticInstruct.splitlines()
+            self.outputFile.write("//push " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in popStaticInstruct])
+
+        if command == "C_POP" and segment == "static":
+            pushStatInstruct = staticPop(filenameNoPath, index)
+            pushStaticInstruct = pushStatInstruct + "\n"
+            pushStaticInstruct = pushStaticInstruct.splitlines()
+            self.outputFile.write("//push " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in pushStaticInstruct])
+
+        if command == "C_PUSH" and segment == "temp":
+            tempPushInstruct = tempPush(index)
+            tempPushInstruct = tempPushInstruct.splitlines()
+            self.outputFile.write("//push " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in tempPushInstruct])
+        
+        if command == "C_POP" and segment == "temp":
+            tempPopInstruct = tempPop(index)
+            tempPopInstruct = tempPopInstruct.splitlines()
+            self.outputFile.write("//pop " + f"{segment} " + f"{index} " + "\n")
+            self.outputFile.writelines([item + "\n" for item in tempPopInstruct])
+
+    def close(self):
+        infiniteLoopInstruct = "(FIN)\n@FIN\n0;JMP"
+        infiniteLoopInstruct = infiniteLoopInstruct.splitlines()
+        self.outputFile.writelines([item + "\n" for item in infiniteLoopInstruct])
+        self.outputFile.close()
+
+filename = sys.argv[1]
+filenameString = str(filename)
+filenameNoExt = filenameString.split('.')[0]
+filenameNoPath = os.path.basename(filenameString)
+filenameNoPath = os.path.splitext(filenameNoPath)[0]
+fs = open(filenameNoExt + ".asm","a")
 
 def main():
-    filename = sys.argv[1]
-    filenameString = str(filename)
-    filenameNoExt = filenameString.split('.')[0]
-
+    codeWriter = CodeWriter(fs)
 
     with open(filename, 'r') as file:
         text = file.read()
@@ -215,12 +353,16 @@ def main():
         while parser.hasMoreLines():
             parser.advance()
             commandType = parser.commandType()
+            if commandType == "C_ARITHMETIC":
+                codeWriter.writeArithmetic(parser.arg1())
+            
+            if commandType == "C_PUSH":
+                codeWriter.writePushPop("C_PUSH", parser.arg1(), parser.arg2())
 
-            if commandType == ""
+            if commandType == "C_POP":
+                codeWriter.writePushPop("C_POP", parser.arg1(), parser.arg2())
 
-            fs = open(filenameNoExt + ".hack","a")
-            fs.write(cInstruction + "\n")
-            fs.close()
+        codeWriter.close()
 
 if __name__ == "__main__":
     main()
