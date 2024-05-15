@@ -158,10 +158,6 @@ def fin():
 class CodeWriter:
     def __init__(self, outputFile):
         self.outputFile = outputFile
-        #self.fs = open(self.outputFile + ".asm","a")
-        # stackInit = "@256\nD=A\n@SP\nM=D\n"
-        # self.outputFile.write("//Initialize stack" + "\n")
-        # self.outputFile.writelines([stackInit])
     
     def writeArithmetic(self, command):
         popArith = str(popArithmetic())
