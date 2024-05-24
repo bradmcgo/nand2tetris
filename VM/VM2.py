@@ -32,7 +32,6 @@ class Parser:
             readLine = self.lines[self.current_line]
             readLine = readLine.lstrip()
             readLine = readLine.split('//')[0]
-            # print("readLine:", readLine)
             self.current_instruction = ""
             if readLine == "" or readLine.startswith("//"):
                 pass
@@ -75,7 +74,6 @@ class Parser:
             return self.current_instruction
         else:    
             arg1Text = self.current_instruction.split()
-            # return up to the equals.
             if len(arg1Text) >= 2:
                 return str(arg1Text[1])
             else:
@@ -226,7 +224,7 @@ def returnInstruct():
     return retInstruct
 
 def bootstrap(callCounter):
-    bootstrapSP = "@256\nD=A\n@SP\nM=D\n" # add call here
+    bootstrapSP = "@256\nD=A\n@SP\nM=D\n"
     bootstrapCall = callInstruct("Sys.init", 0, callCounter)
     bootstrapInstruct = bootstrapSP + bootstrapCall
     return bootstrapInstruct
@@ -239,7 +237,6 @@ class CodeWriter:
     def __init__(self, outputFile):
         self.outputFile = outputFile
         self.filename = ""
-        # print("self.filename:", self.filename)
         self.functionName = ""
         self.functionLoopLabelCounter = 0
         self.stopCounter = 0
@@ -462,20 +459,13 @@ class CodeWriter:
         self.outputFile.close()
 
 if len(sys.argv) != 2:
-    # print("Usage: python script_name.py /path/to/your/directory")
     sys.exit(1)
 
 directory = sys.argv[1]
 files = [file for file in os.listdir(directory) if file.endswith('.vm')]
 files = sorted(files, key=lambda x: (os.path.basename(x) != 'Sys.vm', x))
-print("files:", files)
 directory_name = os.path.basename(os.path.normpath(directory))
 directory_path = os.path.join(directory, directory_name)
-print("directory_name:", directory_path)
-# filenameString = str(file_name)
-# filenameNoExt = filenameString.split('.')[0]
-# filenameNoPath = os.path.basename(filenameString)
-# filenameNoPath = os.path.splitext(filenameNoPath)[0]
 filestream = open(directory_path + ".asm","a")
 
 def main():
@@ -483,7 +473,6 @@ def main():
 
     for file_name in files:
         file_path = os.path.join(directory, file_name)
-        print("file_path:", file_path)
         codeWriter.setFileName(file_name)
         
         with open(file_path, 'r') as file:
@@ -491,12 +480,8 @@ def main():
             parser = Parser(text)
 
             while parser.hasMoreLines():
-                print("parser.hasMoreLines()", parser.hasMoreLines())
                 parser.advance()
                 commandType = parser.commandType()
-                # print("commandType:", commandType)
-                # print("arg1:", parser.arg1())
-                # print("arg2:", parser.arg2())
 
                 if commandType == "C_ARITHMETIC":
                     codeWriter.writeArithmetic(parser.arg1())
