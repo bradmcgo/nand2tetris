@@ -507,7 +507,7 @@ def main():
     for file_name in files:
         file_name_no_ext = file_name.split(".")[0]
         file_path = os.path.join(directory, file_name)
-        filestream = open(directory + f"{file_name_no_ext}" + "Tt.xml","a")
+        filestream = open(directory + f"{file_name_no_ext}" + "Ttt.xml","a")
         # compilationEngine.setFileName(file_name)
         
         with open(file_path, 'r') as file:
