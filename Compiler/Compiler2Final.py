@@ -254,6 +254,7 @@ class CompilationEngine:
         self.current_type = ""
         self.current_kind = ""
 
+        self.doClassMethod = []
         # if self.jackTokenizer.hasMoreTokens():
         self.jackTokenizer.advance()
         
@@ -344,13 +345,15 @@ class CompilationEngine:
                 break
 
     def _checkStarExpression(self):
+        expression = []
         while True:
             if self.jackTokenizer.symbol() == ",":
                 self.jackTokenizer.advance()
-                self.compileExpression()
+                expression.append(self.compileExpression())
             else:
                 break
-
+            return expression
+        
     def _op(self, token):
         ops = ['+', '-', '*', '/', '&amp;', '|', '&lt;', '&gt;', '=']
         if token in ops:
@@ -373,7 +376,7 @@ class CompilationEngine:
             return False
 
     def _subroutineCall(self):
-        doClass = self.jackTokenizer.identifier()
+        self.doClassMethod[0] += self.jackTokenizer.identifier()
         # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier>\n")
         self.jackTokenizer.advance()
         if self.jackTokenizer.symbol() == "(":
@@ -385,7 +388,7 @@ class CompilationEngine:
         else:
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
             self.jackTokenizer.advance()
-            doMethod = self.jackTokenizer.identifier()
+            self.doClassMethod[0] += "." + self.jackTokenizer.identifier()
 
             kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
             if kind in ["arg", "var"]:
@@ -401,16 +404,6 @@ class CompilationEngine:
             self.compileExpressionList()
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
             self.jackTokenizer.advance()
-
-
-
-    def codeWrite(exp):
-        if exp 
-        if len(exp) == 1 and exp[0] == "var":
-            self.vmWriter.writePush(f"push {exp}")
-        else:
-            self.vmWriter.writePush(f"push {exp}")
-
 
 
     def compileClass(self):
@@ -660,6 +653,7 @@ class CompilationEngine:
 
 
     def compileReturn(self):
+        self.vmWriter.writeReturn()
         # self.outputFile.write(f"<returnStatement>\n<keyword> {self.jackTokenizer.keyWord()} </keyword>\n")
         self.jackTokenizer.advance()
         if self.jackTokenizer.tokenType() != "SYMBOL":
@@ -671,36 +665,63 @@ class CompilationEngine:
         # self.outputFile.write(f"</returnStatement>\n")
 
 
+    def codeWrite(self, exp):
+        if len(exp) == 3 and exp[0] and exp[1] and exp[2]:
+            self.codeWrite(exp[0])
+            self.codeWrite(exp[2])
+            self.vmWriter.writeArithmetic(exp[1])
+        if len(exp) == 2 and exp[0] and exp[1]:
+            self.codeWrite(exp[1])
+            self.vmWriter.writeArithmetic(exp[0])
+        if len(exp) == 1 and self.subSymbolTable.kindOf(exp[0]) == "var":
+            self.vmWriter.writePush(f"push {exp[0]}")
+        if len(exp) == 1:
+            self.vmWriter.writePush(f"push {exp[0]}")
+        else:
+            for i in range(1, len(exp)):
+                self.codeWrite(exp[i])
+            self.vmWriter.writeCall(exp[0], len(exp) - 1)
+
+
     def compileExpression(self):
         self.expCounter = 0
         if self.jackTokenizer.symbol() == ")":
             return
         else:
-            # self.outputFile.write(f"<expression>\n")   
-            self.expOpExp = self.compileTerm()
+            # self.outputFile.write(f"<expression>\n")
+            self.expOpExp = []
+            self.expOpExp.append(self.compileTerm())
             # self.terms.append(termValue)
             self.jackTokenizer.advance()
+            self.opExp = []
             while True:
                 if self._op(self.jackTokenizer.symbol()):
+                    if self.opExp:
+                        # call codeWrite here
+                        self.codeWrite(self.opExp)
                     self.expCounter += 1
-                    self.opExp = self.jackTokenizer.symbol()
+                    self.opExp.append(self.jackTokenizer.symbol())
                     # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
                     self.jackTokenizer.advance()
-                    self.opExp += self.compileTerm()
-                    # call codeWrite here
+                    self.opExp.append(self.compileTerm())
                     self.jackTokenizer.advance()
                 else:
+                    if self.expCounter == 1 :
+                        self.expOpExp.extend(self.opExp)
+                        # call codeWrite here
+                        self.codeWrite(self.expOpExp)
+                        self.expCounter = 0
                     break
-            if self.expCounter == 1 :
-                self.expOpExp += self.opExp
-                # call codeWrite here
-                self.expCounter = 0
+
+            # if self.opExp is len(1) and is a constant or a variable, call codeWrite.
+            if len(self.expOpExp) == 1 and len(self.opExp) == 0:
+                self.codeWrite(self.expOpExp)
 
             # self.outputFile.write(f"</expression>\n")
             if self.jackTokenizer.symbol() == ",":
                 pass
                 # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
-    
+        return self.expOpExp
 
     def compileTerm(self):
         # self.outputFile.write(f"<term>\n")
@@ -745,13 +766,13 @@ class CompilationEngine:
             self.jackTokenizer.advance()
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
             self.jackTokenizer.advance()
-            self.compileExpressionList()
+            return self.compileExpressionList()
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         if self.jackTokenizer.tokenType() == "INT_CONST":
             return self.jackTokenizer.intVal()
             # self.outputFile.write(f"<integerConstant> {self.jackTokenizer.intVal()} </integerConstant>\n")
         if self.jackTokenizer.tokenType() == "STRING_CONST":
-            pass
+            return self.jackTokenizer.stringVal()
             # self.outputFile.write(f"<stringConstant> {self.jackTokenizer.stringVal()} </stringConstant>\n")
         elif self.jackTokenizer.tokenType() == "IDENTIFIER":
             
@@ -762,9 +783,9 @@ class CompilationEngine:
             else:
                 pass
                 # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-        
+            return self.jackTokenizer.identifier()
         if self.jackTokenizer.tokenType() == "KEYWORD":
-            pass
+            return self.jackTokenizer.keyWord()
             # self.outputFile.write(f"<keyword> {self.jackTokenizer.keyWord()} </keyword>\n")
         if self.jackTokenizer.tokenType() == "SYMBOL" and self.jackTokenizer.symbol() == "(":
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
@@ -779,12 +800,16 @@ class CompilationEngine:
 
 
     def compileExpressionList(self):
+        doMethod = self.doClassMethod
         # self.outputFile.write(f"<expressionList>\n")
-        exp = self.compileExpression()
+        firstExpression = self.compileExpression()
+        functAndExpression = doMethod.append(firstExpression)
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
-        self._checkStarExpression()
+        nExpressions = self._checkStarExpression()
+        for expression in nExpressions:
+            functAndExpression.append(expression)
         # self.outputFile.write(f"</expressionList>\n")
-        
+        return functAndExpression
 
 if len(sys.argv) != 2:
     sys.exit(1)
