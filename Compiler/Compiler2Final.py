@@ -703,7 +703,10 @@ class CompilationEngine:
             return
         else:
             # self.outputFile.write(f"<expression>\n")
-            localArray.append(str(self.compileTerm()))
+            compiledTerm, compiledTerm2 = str(self.compileTerm())
+            if compiledTerm2:
+                localArray.append(compiledTerm, compiledTerm2)
+            localArray.append(compiledTerm)
             print("self.expOpExp", self.expOpExp)
             # self.terms.append(termValue)
             self.jackTokenizer.advance()
@@ -815,8 +818,14 @@ class CompilationEngine:
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         if self._unaryOp(self.jackTokenizer.symbol()):
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
+            symbol = self.jackTokenizer.symbol()
+            if symbol == "-":
+                symbol = "not"
+            else:
+                pass
             self.jackTokenizer.advance()
-            self.compileTerm()
+            identifier = self.compileTerm()
+            return symbol, identifier
         # self.outputFile.write(f"</term>\n")
 
 
