@@ -701,6 +701,7 @@ class CompilationEngine:
         self.expOpExp = []
         localArray = self.expOpExp.copy()
         self.expCounter = 0
+        whileTrue = False
         if self.jackTokenizer.symbol() == ")":
             return
         else:
@@ -715,6 +716,7 @@ class CompilationEngine:
             # self.opExp = []
             while True:
                 if self._op(self.jackTokenizer.symbol()):
+                    whileTrue = True
                     # if self.opExp:
                     #     # call codeWrite here
                     #     self.codeWrite(self.opExp)
@@ -731,11 +733,14 @@ class CompilationEngine:
                     self.jackTokenizer.advance()
                     # print("self.opExp", self.opExp)
                 else:
+                    if whileTrue == False:
+                        self.codeWrite(localArray)
                     # if self.expCounter == 1 :
                     #     self.expOpExp.extend(self.opExp)
                     #     # call codeWrite here
                     #     print("self.expOpExp", self.expOpExp)
                     #     self.codeWrite(self.expOpExp)
+                    whileTrue = False
                     break
             self.expCounter = 0
 
