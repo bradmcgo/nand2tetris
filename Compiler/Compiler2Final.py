@@ -697,12 +697,13 @@ class CompilationEngine:
 
     def compileExpression(self):
         self.expOpExp = []
+        localArray = self.expOpExp.copy()
         self.expCounter = 0
         if self.jackTokenizer.symbol() == ")":
             return
         else:
             # self.outputFile.write(f"<expression>\n")
-            self.expOpExp.append(str(self.compileTerm()))
+            localArray.append(str(self.compileTerm()))
             print("self.expOpExp", self.expOpExp)
             # self.terms.append(termValue)
             self.jackTokenizer.advance()
@@ -714,12 +715,12 @@ class CompilationEngine:
                     #     self.codeWrite(self.opExp)
                     #     print("yup")
                     self.expCounter += 1
-                    self.expOpExp.append(self.jackTokenizer.symbol())
+                    localArray.append(self.jackTokenizer.symbol())
                     # print("self.opExp", self.opExp)
                     # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
                     self.jackTokenizer.advance()
-                    self.expOpExp.append(str(self.compileTerm()))
-                    self.codeWrite(self.expOpExp)
+                    localArray.append(str(self.compileTerm()))
+                    self.codeWrite(localArray)
                     self.expOpExp = []
                     self.jackTokenizer.advance()
                     # print("self.opExp", self.opExp)
@@ -734,7 +735,7 @@ class CompilationEngine:
 
             # if self.opExp is len(1) and is a constant or a variable, call codeWrite.
             if len(self.expOpExp) == 1:
-                self.codeWrite(self.expOpExp)
+                self.codeWrite(localArray)
 
             # self.outputFile.write(f"</expression>\n")
             if self.jackTokenizer.symbol() == ",":
