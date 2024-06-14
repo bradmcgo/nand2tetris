@@ -720,6 +720,7 @@ class CompilationEngine:
                     # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
                     self.jackTokenizer.advance()
                     localArray.append(str(self.compileTerm()))
+                    print("localArray:", localArray)
                     self.codeWrite(localArray)
                     localArray = []
                     self.jackTokenizer.advance()
