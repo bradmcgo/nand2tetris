@@ -696,31 +696,31 @@ class CompilationEngine:
 
 
     def compileExpression(self):
+        self.expOpExp = []
         self.expCounter = 0
         if self.jackTokenizer.symbol() == ")":
             return
         else:
-            self.expOpExp = []
             # self.outputFile.write(f"<expression>\n")
             self.expOpExp.append(str(self.compileTerm()))
             print("self.expOpExp", self.expOpExp)
             # self.terms.append(termValue)
             self.jackTokenizer.advance()
-            self.opExp = []
+            # self.opExp = []
             while True:
                 if self._op(self.jackTokenizer.symbol()):
-                    if self.opExp:
-                        # call codeWrite here
-                        self.codeWrite(self.opExp)
-                        print("yup")
+                    # if self.opExp:
+                    #     # call codeWrite here
+                    #     self.codeWrite(self.opExp)
+                    #     print("yup")
                     self.expCounter += 1
-                    self.opExp.append(self.jackTokenizer.symbol())
-                    print("self.opExp", self.opExp)
+                    self.expOpExp.append(self.jackTokenizer.symbol())
+                    # print("self.opExp", self.opExp)
                     # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
                     self.jackTokenizer.advance()
-                    self.opExp.append(str(self.compileTerm()))
+                    self.expOpExp.append(str(self.compileTerm()))
                     self.jackTokenizer.advance()
-                    print("self.opExp", self.opExp)
+                    # print("self.opExp", self.opExp)
                 else:
                     if self.expCounter == 1 :
                         self.expOpExp.extend(self.opExp)
@@ -731,7 +731,7 @@ class CompilationEngine:
             self.expCounter = 0
 
             # if self.opExp is len(1) and is a constant or a variable, call codeWrite.
-            if len(self.expOpExp) == 1 and len(self.opExp) == 0:
+            if len(self.expOpExp) == 1:
                 self.codeWrite(self.expOpExp)
 
             # self.outputFile.write(f"</expression>\n")
