@@ -719,14 +719,16 @@ class CompilationEngine:
                     # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
                     self.jackTokenizer.advance()
                     self.expOpExp.append(str(self.compileTerm()))
+                    self.codeWrite(self.expOpExp)
+                    self.expOpExp = []
                     self.jackTokenizer.advance()
                     # print("self.opExp", self.opExp)
                 else:
-                    if self.expCounter == 1 :
-                        self.expOpExp.extend(self.opExp)
-                        # call codeWrite here
-                        print("self.expOpExp", self.expOpExp)
-                        self.codeWrite(self.expOpExp)
+                    # if self.expCounter == 1 :
+                    #     self.expOpExp.extend(self.opExp)
+                    #     # call codeWrite here
+                    #     print("self.expOpExp", self.expOpExp)
+                    #     self.codeWrite(self.expOpExp)
                     break
             self.expCounter = 0
 
