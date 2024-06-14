@@ -734,8 +734,8 @@ class CompilationEngine:
             self.expCounter = 0
 
             # if self.opExp is len(1) and is a constant or a variable, call codeWrite.
-            if len(self.expOpExp) == 1:
-                self.codeWrite(localArray)
+            # if len(self.expOpExp) == 1:
+            #     self.codeWrite(localArray)
 
             # self.outputFile.write(f"</expression>\n")
             if self.jackTokenizer.symbol() == ",":
