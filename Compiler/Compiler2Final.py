@@ -721,7 +721,7 @@ class CompilationEngine:
                     self.jackTokenizer.advance()
                     localArray.append(str(self.compileTerm()))
                     self.codeWrite(localArray)
-                    self.expOpExp = []
+                    localArray = []
                     self.jackTokenizer.advance()
                     # print("self.opExp", self.opExp)
                 else:
