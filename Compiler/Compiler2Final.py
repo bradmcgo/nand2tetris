@@ -220,6 +220,8 @@ class VMWriter:
             self.outputFile.write("add\n")
         elif command == "-":
             self.outputFile.write("sub\n")
+        elif command == "not":
+            self.outputFile.write("not\n")
 
     def writeLabel(self, label):
         self.outputFile.write(f"label {label}\n")
