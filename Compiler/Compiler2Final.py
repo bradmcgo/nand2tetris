@@ -213,9 +213,9 @@ class VMWriter:
 
     def writeArithmetic(self, command):
         if command == "*":
-            self.outputFile.write("Math.multiply 2\n")
+            self.outputFile.write("call Math.multiply 2\n")
         elif command == "/":
-            self.outputFile.write("Math.divide 2\n")
+            self.outputFile.write("call Math.divide 2\n")
         elif command == "+":
             self.outputFile.write("add\n")
         elif command == "-":
@@ -264,6 +264,8 @@ class CompilationEngine:
         self.current_kind = ""
 
         self.doClassMethod = []
+
+        self.argCounter = 1
         # if self.jackTokenizer.hasMoreTokens():
         self.jackTokenizer.advance()
         
@@ -385,7 +387,7 @@ class CompilationEngine:
             return False
 
     def _subroutineCall(self):
-        self.doClassMethod += self.jackTokenizer.identifier()
+        self.doClassMethod.append(self.jackTokenizer.identifier())
         # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier>\n")
         self.jackTokenizer.advance()
         if self.jackTokenizer.symbol() == "(":
@@ -397,15 +399,18 @@ class CompilationEngine:
         else:
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
             self.jackTokenizer.advance()
-            self.doClassMethod[0] += "." + self.jackTokenizer.identifier()
-
-            kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
-            if kind in ["arg", "var"]:
-                pass
-                # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-            else:
-                pass
-                # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+            self.doClassMethod.append("." + self.jackTokenizer.identifier())
+            self.doClassMethod[0] = self.doClassMethod[0] + self.doClassMethod[1]
+            del self.doClassMethod[1]
+            print("self.doClassMethod:", self.doClassMethod)
+            
+            # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
+            # if kind in ["arg", "var"]:
+            #     pass
+            #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+            # else:
+            #     pass
+            #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
 
             self.jackTokenizer.advance()
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
@@ -458,13 +463,13 @@ class CompilationEngine:
         self.current_name = self.jackTokenizer.identifier()
         self.classSymbolTable.define(self.current_name, self.current_type, self.current_kind)
 
-        kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
-        if kind in ["arg", "var"]:
-            pass
-            # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-        else:
-            pass
-            # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+        # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
+        # if kind in ["arg", "var"]:
+        #     pass
+        #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+        # else:
+        #     pass
+        #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
 
         self.jackTokenizer.advance()
         self._checkStar()
@@ -507,13 +512,13 @@ class CompilationEngine:
             self.current_name = self.jackTokenizer.identifier()
             self.subSymbolTable.define(self.current_name, self.current_type, "arg")
 
-            kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
-            if kind in ["arg", "var"]:
-                pass
-                # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-            else:
-                pass
-                # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+            # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
+            # if kind in ["arg", "var"]:
+            #     pass
+            #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+            # else:
+            #     pass
+            #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
             
             self.jackTokenizer.advance()
             self._checkTypeStar()
@@ -550,12 +555,12 @@ class CompilationEngine:
         self.current_name = self.jackTokenizer.identifier()
         self.subSymbolTable.define(self.current_name, self.current_type, self.current_kind)
 
-        kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
-        if kind in ["arg", "var"]:
-            pass
-            # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-        else:
-            pass
+        # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
+        # if kind in ["arg", "var"]:
+        #     pass
+        #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+        # else:
+        #     pass
             # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
         
         self.jackTokenizer.advance()
@@ -593,12 +598,12 @@ class CompilationEngine:
         # self.outputFile.write(f"<letStatement>\n<keyword> {self.jackTokenizer.keyWord()} </keyword>\n")
         self.jackTokenizer.advance()
 
-        kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
-        if kind in ["arg", "var"]:
-            pass
-            # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-        else:
-            pass
+        # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
+        # if kind in ["arg", "var"]:
+        #     pass
+        #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+        # else:
+        #     pass
             # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
         
         self.jackTokenizer.advance()
@@ -684,13 +689,16 @@ class CompilationEngine:
             self.codeWrite(exp[0])
             self.codeWrite(exp[2])
             self.vmWriter.writeArithmetic(exp[1])
-        if len(exp) == 2 and exp[0] and exp[1]:
+        elif len(exp) == 2 and exp[0] and exp[1] and exp[0].isdigit():
+            self.codeWrite(exp[0])
+            self.vmWriter.writeArithmetic(exp[1])
+        elif len(exp) == 2 and exp[0] and exp[1]:
             self.codeWrite(exp[1])
             self.vmWriter.writeArithmetic(exp[0])
-        if len(exp) == 1 and self.subSymbolTable.kindOf(exp[0]) == "var":
-            self.vmWriter.writePush(f"{exp[0]}")
-        if len(exp) == 1:
-            self.vmWriter.writePush(f"{exp[0]}")
+        elif len(exp) == 1 and self.subSymbolTable.kindOf(exp[0]) == "var":
+            self.vmWriter.writePush("local", exp[0])
+        elif len(exp) == 1:
+            self.vmWriter.writePush("constant", exp[0])
         else:
             for i in range(1, len(exp)):
                 self.codeWrite(exp[i])
@@ -700,17 +708,17 @@ class CompilationEngine:
     def compileExpression(self):
         self.expOpExp = []
         localArray = self.expOpExp.copy()
+        returnedDoArray = []
         self.expCounter = 0
         whileTrue = False
         if self.jackTokenizer.symbol() == ")":
             return
         else:
             # self.outputFile.write(f"<expression>\n")
-            compiledTerm, compiledTerm2 = str(self.compileTerm())
-            if compiledTerm2:
-                localArray.append(compiledTerm, compiledTerm2)
-            localArray.append(compiledTerm)
-            print("self.expOpExp", self.expOpExp)
+            compiledTerm = str(self.compileTerm())
+            for term in compiledTerm:
+                localArray.append(term)
+                print("term:", term)
             # self.terms.append(termValue)
             self.jackTokenizer.advance()
             # self.opExp = []
@@ -726,7 +734,8 @@ class CompilationEngine:
                     # print("self.opExp", self.opExp)
                     # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
                     self.jackTokenizer.advance()
-                    localArray.append(str(self.compileTerm()))
+                    if self.compileTerm() != None:
+                        localArray.append(str(self.compileTerm()))
                     print("localArray:", localArray)
                     self.codeWrite(localArray)
                     localArray = []
@@ -750,6 +759,7 @@ class CompilationEngine:
 
             # self.outputFile.write(f"</expression>\n")
             if self.jackTokenizer.symbol() == ",":
+                self.argCounter += 1
                 pass
                 # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         return self.expOpExp
@@ -759,12 +769,12 @@ class CompilationEngine:
         # additional logic for parsing lookaheads.
         if self.jackTokenizer.tokenType() == "IDENTIFIER" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "[":
             
-            kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
-            if kind in ["arg", "var"]:
-                pass
-                # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-            else:
-                pass
+            # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
+            # if kind in ["arg", "var"]:
+            #     pass
+            #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+            # else:
+            #     pass
                 # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
             
             self.jackTokenizer.advance()
@@ -774,24 +784,24 @@ class CompilationEngine:
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         if self.jackTokenizer.tokenType() == "IDENTIFIER" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == ".":
             
-            kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
-            if kind in ["arg", "var"]:
-                pass
-                # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-            else:
-                pass
+            # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
+            # if kind in ["arg", "var"]:
+            #     pass
+            #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+            # else:
+            #     pass
                 # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
             
             self.jackTokenizer.advance()
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
             self.jackTokenizer.advance()
             
-            kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
-            if kind in ["arg", "var"]:
-                pass
-                # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-            else:
-                pass
+            # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
+            # if kind in ["arg", "var"]:
+            #     pass
+            #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+            # else:
+            #     pass
                 # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
             
             self.jackTokenizer.advance()
@@ -803,16 +813,22 @@ class CompilationEngine:
             return self.jackTokenizer.intVal()
             # self.outputFile.write(f"<integerConstant> {self.jackTokenizer.intVal()} </integerConstant>\n")
         if self.jackTokenizer.tokenType() == "STRING_CONST":
+            string = self.jackTokenizer.stringVal()
+            stringLength = len(string)
+            self.vmWriter.writePush("constant", stringLength)
+            self.vmWriter.writeCall("String.new", 1)
+            for c in string:
+                
             return self.jackTokenizer.stringVal()
             # self.outputFile.write(f"<stringConstant> {self.jackTokenizer.stringVal()} </stringConstant>\n")
         elif self.jackTokenizer.tokenType() == "IDENTIFIER":
             
-            kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
-            if kind in ["arg", "var"]:
-                pass
-                # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-            else:
-                pass
+            # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
+            # if kind in ["arg", "var"]:
+            #     pass
+            #     # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.subSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.subSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.subSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
+            # else:
+            #     pass
                 # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
             return self.jackTokenizer.identifier()
         if self.jackTokenizer.tokenType() == "KEYWORD":
@@ -840,9 +856,12 @@ class CompilationEngine:
         doMethod = self.doClassMethod
         # self.outputFile.write(f"<expressionList>\n")
         firstExpression = self.compileExpression()
+        print("firstExpression:", firstExpression)
         functAndExpression = doMethod.append(firstExpression)
+        print("functAndExpression:", functAndExpression)
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         nExpressions = self._checkStarExpression()
+        self.vmWriter.writeCall(str(self.doClassMethod[0]), self.argCounter)
         print("nExpressions", nExpressions)
         if nExpressions:
             for expression in nExpressions:
