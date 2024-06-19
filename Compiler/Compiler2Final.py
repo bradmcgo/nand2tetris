@@ -222,16 +222,18 @@ class VMWriter:
             self.outputFile.write("sub\n")
         elif command == "neg":
             self.outputFile.write("neg\n")
+        elif command == "not":
+            self.outputFile.write("not\n")
         elif command == "&gt;":
-            self.outputFile.write("&gt;\n")
+            self.outputFile.write("gt\n")
         elif command == "&lt;":
-            self.outputFile.write("&lt;\n")
-        elif command == "&eq;":
-            self.outputFile.write("&eq;\n")
+            self.outputFile.write("lt\n")
+        elif command == "=":
+            self.outputFile.write("eq\n")
         elif command == "&amp;":
-            self.outputFile.write("&amp;\n")
+            self.outputFile.write("and\n")
         elif command == "or;":
-            self.outputFile.write("or;\n")
+            self.outputFile.write("or\n")
 
     def writeLabel(self, label):
         self.outputFile.write(f"label {label}\n")
@@ -286,6 +288,8 @@ class CompilationEngine:
         self.returnArray = []
 
         self.unaryOp = False
+
+        self.label_counter = 0
         # if self.jackTokenizer.hasMoreTokens():
         self.jackTokenizer.advance()
         
@@ -537,7 +541,7 @@ class CompilationEngine:
         # self.outputFile.write(f"<parameterList>\n")
         self.jackTokenizer.advance()
         if self.jackTokenizer.symbol() != ")":
-            # self.outputFile.write(self._typeOfChar())
+            self._typeOfChar()
             self.jackTokenizer.advance()
 
             self.current_name = self.jackTokenizer.identifier()
@@ -568,7 +572,8 @@ class CompilationEngine:
             else:
                 print("Not a keyword or not var.")
                 break
-        self.vmWriter.writeFunction(f"{self.className}.{self.subroutineName}", self.subSymbolTable.varCount("var"))
+        functionVarCount = self.subSymbolTable.varCount("var") + self.subSymbolTable.varCount("arg")
+        self.vmWriter.writeFunction(f"{self.className}.{self.subroutineName}", functionVarCount)
         if self.current_sub_kind == "constructor":
             self.vmWriter.writePush("constant", self.classSymbolTable.varCount("field"))
             self.vmWriter.writeCall("Memory.alloc", 1)
@@ -577,7 +582,8 @@ class CompilationEngine:
         self.jackTokenizer.advance()
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         # self.outputFile.write(f"</subroutineBody>\n")
-        self.jackTokenizer.advance()
+        if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "function" or self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "method":
+            self.jackTokenizer.advance()
 
 
     def compileVarDec(self):
@@ -651,11 +657,20 @@ class CompilationEngine:
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         self.jackTokenizer.advance()
         self.compileExpression()
+        self.vmWriter.writeArithmetic("not")
+        self.label_counter += 1
+        label1 = f"L{self.label_counter}"
+        self.label_counter += 1
+        label2 = f"L{self.label_counter}"
+        self.vmWriter.writeIf(label1)
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         self.jackTokenizer.advance()
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         self.jackTokenizer.advance()
+        self.label_counter += 1
         self.compileStatements()
+        self.vmWriter.writeGoto(label2)
+        self.vmWriter.writeLabel(label1)
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         self.jackTokenizer.advance()
         if self.jackTokenizer.keyWord() == "else":
@@ -667,21 +682,31 @@ class CompilationEngine:
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
             self.jackTokenizer.advance()
         # self.outputFile.write(f"</ifStatement>\n")
+        self.vmWriter.writeLabel(label2)
 
 
     def compileWhile(self):
+        self.label_counter += 1
+        label1 = f"L{self.label_counter}"
+        self.label_counter += 1
+        label2 = f"L{self.label_counter}"
         # self.outputFile.write(f"<whileStatement>\n<keyword> {self.jackTokenizer.keyWord()} </keyword>\n")
         self.jackTokenizer.advance()
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         self.jackTokenizer.advance()
+        self.vmWriter.writeLabel(label1)
         self.compileExpression()
+        self.vmWriter.writeArithmetic("not")
+        self.vmWriter.writeIf(label2)
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         self.jackTokenizer.advance()
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         self.jackTokenizer.advance()
         self.compileStatements()
+        self.vmWriter.writeGoto(label1)
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         # self.outputFile.write(f"</whileStatement>\n")
+        self.vmWriter.writeLabel(label2)
         self.jackTokenizer.advance()
 
 
@@ -701,22 +726,26 @@ class CompilationEngine:
         print("self.current_sub_kind:", self.current_sub_kind)
         if self.current_sub_kind == "method" or self.current_sub_kind == "function" and self.current_type == "void":
             self.vmWriter.writePush("constant", "0")
-            self.vmWriter.writeReturn()
+            # self.vmWriter.writeReturn()
         elif self.current_sub_kind == "method" and self.current_type != "void":
             self.vmWriter.writePush("argument", 0)
             self.vmWriter.writePop("pointer", 0)
         elif self.current_sub_kind == "function" and self.current_type != "void":
-            self.vmWriter.writeReturn()
+            pass
+            # self.vmWriter.writeReturn()
         if self.current_sub_kind == "constructor":
             self.vmWriter.writePush("pointer", 0)
-            self.vmWriter.writeReturn()
         # self.outputFile.write(f"<returnStatement>\n<keyword> {self.jackTokenizer.keyWord()} </keyword>\n")
         self.jackTokenizer.advance()
         if self.jackTokenizer.tokenType() != "SYMBOL":
             self.compileExpression()
+            self.jackTokenizer.advance()
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         else:
             pass
+        # if self.jackTokenizer.result[self.jackTokenizer.current_token] == "}":
+        #     self.jackTokenizer.advance()
+        self.vmWriter.writeReturn()
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         # self.outputFile.write(f"</returnStatement>\n")
 
@@ -729,9 +758,18 @@ class CompilationEngine:
         print("exp:", exp)
         if len(exp) == 1 and exp[0] != "None":
             if exp[0] == "not":
-                self.vmWriter.writePush(exp[0])
+                self.vmWriter.writeArithmetic(exp[0])
+            elif exp[0] == "true":
+                self.vmWriter.writePush("constant", 1)
+                self.vmWriter.writeArithmetic("neg")
+            elif exp[0] == "null" or exp[0] == "false":
+                self.vmWriter.writePush("constant", 0)
+            elif exp[0] == "this":
+                self.vmWriter.writePush("pointer", 0)
             elif self.subSymbolTable.kindOf(exp[0]) == "var":
                 self.vmWriter.writePush("local", self.subSymbolTable.indexOf(exp[0]))
+            elif self.subSymbolTable.kindOf(exp[0]) == "arg":
+                self.vmWriter.writePush("argument", self.subSymbolTable.indexOf(exp[0]))
             else:
                 self.vmWriter.writePush("constant", exp[0])
         elif len(exp) == 3:
