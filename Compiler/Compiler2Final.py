@@ -727,9 +727,11 @@ class CompilationEngine:
         label2 = f"L{self.label_counter}"
         self.vmWriter.writeIf(label1)
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
-        self.jackTokenizer.advance()
+        if self.jackTokenizer.symbol() == ")" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "{":
+            self.jackTokenizer.advance()
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         self.jackTokenizer.advance()
+        print("ifIdentifier:", self.jackTokenizer.identifier())
         self.label_counter += 1
         self.compileStatements()
         self.vmWriter.writeGoto(label2)
@@ -767,6 +769,7 @@ class CompilationEngine:
             self.jackTokenizer.advance()
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
         self.jackTokenizer.advance()
+        print("afterWhileAdvances:", self.jackTokenizer.identifier())
         self.compileStatements()
         self.vmWriter.writeGoto(label1)
         # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
@@ -885,9 +888,9 @@ class CompilationEngine:
                 if self._op(self.jackTokenizer.symbol()):
                     print("op:", self.jackTokenizer.symbol())
                     if self.jackTokenizer.symbol() == "&amp;" or self.jackTokenizer.symbol() == "or":
-                        if self.jackTokenizer.symbol() == "&amp;":
+                        if self.jackTokenizer.symbol() == "&amp;" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "(":
                             self.andOrSymbol = "and"
-                        elif self.jackTokenizer.symbol() == "or":
+                        elif self.jackTokenizer.symbol() == "or" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "(":
                             self.andOrSymbol = "or"
                         self.andOr = True
                     whileTrue = True
@@ -1102,7 +1105,14 @@ class CompilationEngine:
         nExpressions = self._checkStarExpression()
         print("nExpressions:", nExpressions)
         if len(self.functAndExpression) == 1 and any('.' in element for element in self.functAndExpression):
-            self.vmWriter.writeCall(self.functAndExpression[0], 0)
+            splitFunctAndExpr = sum([elem.split('.') if '.' in elem else [elem] for elem in self.functAndExpression], [])
+            splitFunctAndExprClass = splitFunctAndExpr[0]
+            splitFunctAndExprMethod = splitFunctAndExpr[1]
+            print("self.subSymbolTable.kindOf(splitFunctAndExpr", self.subSymbolTable.typeOf(splitFunctAndExprClass))
+            if self.subSymbolTable.kindOf(splitFunctAndExprClass) != "NONE":
+                    self.vmWriter.writeCall(str(self.subSymbolTable.typeOf(splitFunctAndExprClass)) + "." + splitFunctAndExprMethod, 0)
+            else:
+                self.vmWriter.writeCall(self.functAndExpression[0], 0)
         if self.subCallFunction == True:
             # pass
             self.vmWriter.writeCall(str(self.doClassMethod[0]), self.ExpressionListCounter)
