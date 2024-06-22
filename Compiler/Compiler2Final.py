@@ -302,6 +302,7 @@ class CompilationEngine:
         self.andOr = False
         self.andOrSymbol = ""
 
+        self.isArray = False
         # if self.jackTokenizer.hasMoreTokens():
         self.jackTokenizer.advance()
         
@@ -655,6 +656,7 @@ class CompilationEngine:
                 if self.jackTokenizer.keyWord() == "let":
                     self.compileLet()
                     self.jackTokenizer.advance()
+                    print("afterLet", self.jackTokenizer.keyWord())
                 elif self.jackTokenizer.keyWord() == "if":
                     self.compileIf()
                 elif self.jackTokenizer.keyWord() == "while":
@@ -690,6 +692,7 @@ class CompilationEngine:
         #     self.vmWriter.writePush(letKind, self.classSymbolTable.indexOf(self.letVarName))
 
         if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "[":
+            self.isArray = True
             self.compileExpression()
             self.vmWriter.writePop("temp", 0)
             self.vmWriter.writePop("pointer", 1)
@@ -699,14 +702,15 @@ class CompilationEngine:
             self.jackTokenizer.advance()
             self.jackTokenizer.advance()
             self.compileExpression()
-        if self.subSymbolTable.kindOf(self.letVarName) != "NONE":
-            self.vmWriter.writePop(letKind, self.subSymbolTable.indexOf(self.letVarName))
-        else:
-            letKind = self.classSymbolTable.kindOf(self.letVarName)
-            if letKind == "field":
-                letKind = "this"
-            self.vmWriter.writePop(letKind, self.classSymbolTable.indexOf(self.letVarName))
-
+        if self.isArray == False:
+            if self.subSymbolTable.kindOf(self.letVarName) != "NONE":
+                self.vmWriter.writePop(letKind, self.subSymbolTable.indexOf(self.letVarName))
+            else:
+                letKind = self.classSymbolTable.kindOf(self.letVarName)
+                if letKind == "field":
+                    letKind = "this"
+                self.vmWriter.writePop(letKind, self.classSymbolTable.indexOf(self.letVarName))
+        self.isArray = False
 
     def compileIf(self):
         # self.outputFile.write(f"<ifStatement>\n<keyword> {self.jackTokenizer.keyWord()} </keyword>\n")
@@ -792,7 +796,7 @@ class CompilationEngine:
     def compileReturn(self):
         print("self.current_type:", self.current_type)
         print("self.current_sub_kind:", self.current_sub_kind)
-        if self.current_sub_kind == "method" or self.current_sub_kind == "function" and self.current_type == "void":
+        if self.current_type == "void" and self.current_sub_kind == "method" or self.current_sub_kind == "function":
             self.vmWriter.writePush("constant", "0")
             # self.vmWriter.writeReturn()
         elif self.current_sub_kind == "method" and self.current_type != "void":
@@ -882,7 +886,12 @@ class CompilationEngine:
                 compiledTerm = str(compiledTerm)
                 localArray.append(compiledTerm)
             # self.terms.append(termValue)
-            self.jackTokenizer.advance()
+            print("beforeAdvance", self.jackTokenizer.result[self.jackTokenizer.current_token + 1])
+            if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "let" or self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "do" or self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "if" or self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "while":
+                pass
+            else:
+                self.jackTokenizer.advance()
+            print("afterIt", self.jackTokenizer.result[self.jackTokenizer.current_token + 1])
             # self.opExp = []
             while True:
                 if self._op(self.jackTokenizer.symbol()):
@@ -902,7 +911,9 @@ class CompilationEngine:
                     localArray.append(self.jackTokenizer.symbol())
                     # print("self.opExp", self.opExp)
                     # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
-                    self.jackTokenizer.advance()
+                    print("beforeAdvance2", self.jackTokenizer.result[self.jackTokenizer.current_token + 1])
+                    if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != "let" or self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != "do" or self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != "if" or self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != "while":
+                        self.jackTokenizer.advance()
                     if self.compileTerm() != None:
                         localArray.append(str(self.compileTerm()))
                     print("localArray:", localArray)
@@ -946,7 +957,7 @@ class CompilationEngine:
             self.jackTokenizer.advance()
             self.jackTokenizer.advance()
             self.compileExpression()
-
+            print("afterThat", self.jackTokenizer.result[self.jackTokenizer.current_token + 1])
             # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
             # if kind in ["arg", "var"]:
             #     pass
@@ -1041,7 +1052,7 @@ class CompilationEngine:
             for c in string:
                 self.vmWriter.writePush("constant", c)
                 self.vmWriter.writeCall("String.appendChar", 1)
-            return self.jackTokenizer.stringVal()
+            # return self.jackTokenizer.stringVal()
             # self.outputFile.write(f"<stringConstant> {self.jackTokenizer.stringVal()} </stringConstant>\n")
         elif self.jackTokenizer.tokenType() == "IDENTIFIER":
             # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
@@ -1054,7 +1065,8 @@ class CompilationEngine:
             print("bore", self.jackTokenizer.identifier())
             return self.jackTokenizer.identifier()
         if self.jackTokenizer.tokenType() == "KEYWORD":
-            return self.jackTokenizer.keyWord()
+            if self.current_sub_kind != "constructor":
+                return self.jackTokenizer.keyWord()
             # self.outputFile.write(f"<keyword> {self.jackTokenizer.keyWord()} </keyword>\n")
         if self.jackTokenizer.tokenType() == "SYMBOL" and self.jackTokenizer.symbol() == "(":
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
@@ -1107,12 +1119,21 @@ class CompilationEngine:
         if len(self.functAndExpression) == 1 and any('.' in element for element in self.functAndExpression):
             splitFunctAndExpr = sum([elem.split('.') if '.' in elem else [elem] for elem in self.functAndExpression], [])
             splitFunctAndExprClass = splitFunctAndExpr[0]
+            print("splitFunctAndExprClass", splitFunctAndExprClass)
             splitFunctAndExprMethod = splitFunctAndExpr[1]
-            print("self.subSymbolTable.kindOf(splitFunctAndExpr", self.subSymbolTable.typeOf(splitFunctAndExprClass))
+            numberOfArguments = 1
+            print("self.subSymbolTable.typeOf(splitFunctAndExpr", self.subSymbolTable.typeOf(splitFunctAndExprClass))
+            if splitFunctAndExprClass == "Keyboard" or splitFunctAndExprMethod == "new":
+                numberOfArguments = 0
             if self.subSymbolTable.kindOf(splitFunctAndExprClass) != "NONE":
-                    self.vmWriter.writeCall(str(self.subSymbolTable.typeOf(splitFunctAndExprClass)) + "." + splitFunctAndExprMethod, 0)
+                    self.vmWriter.writeCall(str(self.subSymbolTable.typeOf(splitFunctAndExprClass)) + "." + splitFunctAndExprMethod, numberOfArguments)
+            elif self.classSymbolTable.kindOf(splitFunctAndExprClass) != "NONE":
+                    self.vmWriter.writeCall(str(self.classSymbolTable.typeOf(splitFunctAndExprClass)) + "." + splitFunctAndExprMethod, numberOfArguments)
             else:
-                self.vmWriter.writeCall(self.functAndExpression[0], 0)
+                self.vmWriter.writeCall(self.functAndExpression[0], numberOfArguments)
+        else:
+            pass
+
         if self.subCallFunction == True:
             # pass
             self.vmWriter.writeCall(str(self.doClassMethod[0]), self.ExpressionListCounter)
@@ -1123,10 +1144,14 @@ class CompilationEngine:
                 if self.current_kind == "method":
                     self.argCounter += 1
                 print("theCall", self.subSymbolTable.kindOf(self.doClassMethod[0]))
+            
                 if self.subSymbolTable.kindOf(self.doClassMethod[0]) != "NONE":
                     self.vmWriter.writeCall(str(self.subSymbolTable.kindOf(self.doClassMethod[0])), self.ExpressionListCounter)
+                elif self.classSymbolTable.kindOf(self.doClassMethod[0]) != "NONE":
+                    self.vmWriter.writeCall(str(self.classSymbolTable.kindOf(self.doClassMethod[0])), self.ExpressionListCounter)
                 else:
                     self.vmWriter.writeCall(str(self.doClassMethod[0]), self.ExpressionListCounter)
+
         if nExpressions:
             for expression in nExpressions:
                 print("expression:", expression)
