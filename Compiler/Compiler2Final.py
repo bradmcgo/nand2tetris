@@ -303,6 +303,7 @@ class CompilationEngine:
         self.andOrSymbol = ""
 
         self.isArray = False
+        self.thatFlag = False
         # if self.jackTokenizer.hasMoreTokens():
         self.jackTokenizer.advance()
         
@@ -854,8 +855,13 @@ class CompilationEngine:
             self.codeWrite([exp[2]])
             self.vmWriter.writeArithmetic(exp[1])
         elif len(exp) == 2:
-            if exp[1].isdigit():
-                self.codeWrite(exp[1])
+            print("thatOtherOne", exp[0])
+            print("thatOne", exp[1])
+            if self._op(exp[1]):
+                self.codeWrite([exp[0]])
+                self.vmWriter.writeArithmetic(exp[1])
+            elif self._op(exp[0]):
+                self.codeWrite([exp[1]])
                 self.vmWriter.writeArithmetic(exp[0])
             else:
                 self.codeWrite(exp[1])
@@ -918,6 +924,9 @@ class CompilationEngine:
                         localArray.append(str(self.compileTerm()))
                     print("localArray:", localArray)
                     self.codeWrite(localArray)
+                    if self.thatFlag == True:
+                        self.vmWriter.writePush("that", 0)
+                        self.thatFlag = False
                     self.returnArray = localArray
                     localArray = []
                     self.jackTokenizer.advance()
@@ -925,6 +934,9 @@ class CompilationEngine:
                 else:
                     if whileTrue == False:
                         self.codeWrite(localArray)
+                        if self.thatFlag == True:
+                            self.vmWriter.writePush("that", 0)
+                            self.thatFlag = False
                         self.returnArray = localArray
                     # if self.expCounter == 1 :
                     #     self.expOpExp.extend(self.opExp)
@@ -938,7 +950,6 @@ class CompilationEngine:
             # if self.opExp is len(1) and is a constant or a variable, call codeWrite.
             # if len(self.expOpExp) == 1:
             #     self.codeWrite(localArray)
-
             # self.outputFile.write(f"</expression>\n")
             if self.jackTokenizer.symbol() == ",":
                 self.argCounter += 1
@@ -954,10 +965,14 @@ class CompilationEngine:
             self.jackTokenizer.advance()
             self.compileExpression()
             self.vmWriter.writeArithmetic("+")
-            self.jackTokenizer.advance()
-            self.jackTokenizer.advance()
-            self.compileExpression()
+            if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == ";":
+                self.vmWriter.writePop("pointer", 1)
+                self.thatFlag = True
             print("afterThat", self.jackTokenizer.result[self.jackTokenizer.current_token + 1])
+            if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != ";":
+                self.jackTokenizer.advance()
+                self.jackTokenizer.advance()
+                self.compileExpression()
             # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
             # if kind in ["arg", "var"]:
             #     pass
@@ -1045,13 +1060,36 @@ class CompilationEngine:
             return self.jackTokenizer.intVal()
             # self.outputFile.write(f"<integerConstant> {self.jackTokenizer.intVal()} </integerConstant>\n")
         if self.jackTokenizer.tokenType() == "STRING_CONST":
+            lookup_table = {
+                ' ': 32, '!': 33, '"': 34, '#': 35, '$': 36, '%': 37, '&': 38, "'": 39,
+                '(': 40, ')': 41, '*': 42, '+': 43, ',': 44, '-': 45, '.': 46, '/': 47,
+                '0': 48, '1': 49, '2': 50, '3': 51, '4': 52, '5': 53, '6': 54, '7': 55,
+                '8': 56, '9': 57, ':': 58, ';': 59, '<': 60, '=': 61, '>': 62, '?': 63,
+                '@': 64, 'A': 65, 'B': 66, 'C': 67, 'D': 68, 'E': 69, 'F': 70, 'G': 71,
+                'H': 72, 'I': 73, 'J': 74, 'K': 75, 'L': 76, 'M': 77, 'N': 78, 'O': 79,
+                'P': 80, 'Q': 81, 'R': 82, 'S': 83, 'T': 84, 'U': 85, 'V': 86, 'W': 87,
+                'X': 88, 'Y': 89, 'Z': 90, '[': 91, '\\': 92, ']': 93, '^': 94, '_': 95,
+                '`': 96, 'a': 97, 'b': 98, 'c': 99, 'd': 100, 'e': 101, 'f': 102, 'g': 103,
+                'h': 104, 'i': 105, 'j': 106, 'k': 107, 'l': 108, 'm': 109, 'n': 110, 'o': 111,
+                'p': 112, 'q': 113, 'r': 114, 's': 115, 't': 116, 'u': 117, 'v': 118, 'w': 119,
+                'x': 120, 'y': 121, 'z': 122, '{': 123, '|': 124, '}': 125, '~': 126,
+                'DEL': 127, 'newLine': 128, 'backSpace': 129, 'leftArrow': 130, 'upArrow': 131,
+                'rightArrow': 132, 'downArrow': 133, 'home': 134, 'end': 135, 'pageUp': 136,
+                'pageDown': 137, 'insert': 138, 'delete': 139, 'esc': 140, 'f1': 141, 'f2': 142,
+                'f3': 143, 'f4': 144, 'f5': 145, 'f6': 146, 'f7': 147, 'f8': 148, 'f9': 149,
+                'f10': 150, 'f11': 151, 'f12': 152
+            }
+            def get_character_code(c):
+                return lookup_table.get(c, None)
+
             string = self.jackTokenizer.stringVal()
             stringLength = len(string)
             self.vmWriter.writePush("constant", stringLength)
             self.vmWriter.writeCall("String.new", 1)
             for c in string:
-                self.vmWriter.writePush("constant", c)
-                self.vmWriter.writeCall("String.appendChar", 1)
+                char = get_character_code(c)
+                self.vmWriter.writePush("constant", char)
+                self.vmWriter.writeCall("String.appendChar", 2)
             # return self.jackTokenizer.stringVal()
             # self.outputFile.write(f"<stringConstant> {self.jackTokenizer.stringVal()} </stringConstant>\n")
         elif self.jackTokenizer.tokenType() == "IDENTIFIER":
