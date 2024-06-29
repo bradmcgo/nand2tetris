@@ -320,6 +320,8 @@ class CompilationEngine:
         self.noClass = False
 
         self.negate = False
+
+        self.letFlag = False
         # if self.jackTokenizer.hasMoreTokens():
         self.jackTokenizer.advance()
         
@@ -680,10 +682,12 @@ class CompilationEngine:
     def compileStatements(self):
         # self.outputFile.write(f"<statements>\n")
         while True:
+            print("statementWord:", self.jackTokenizer.symbol())
             if self.jackTokenizer.tokenType() == "KEYWORD":
                 if self.jackTokenizer.keyWord() == "let":
                     self.compileLet()
-                    self.jackTokenizer.advance()
+                    if self.jackTokenizer.symbol() != "}":
+                        self.jackTokenizer.advance()
                     print("afterLet", self.jackTokenizer.keyWord())
                 elif self.jackTokenizer.keyWord() == "if":
                     self.compileIf()
@@ -692,7 +696,7 @@ class CompilationEngine:
                 elif self.jackTokenizer.keyWord() == "do":
                     self.compileDo()
                 elif self.jackTokenizer.keyWord() == "return":
-                        self.compileReturn()
+                    self.compileReturn()
                 else:
                     return "Not a valid keyword."
             else:
@@ -702,6 +706,7 @@ class CompilationEngine:
 
     def compileLet(self):
         # self.outputFile.write(f"<letStatement>\n<keyword> {self.jackTokenizer.keyWord()} </keyword>\n")
+        self.letFlag = False
         self.jackTokenizer.advance()
         self.letVarName = self.jackTokenizer.identifier()
         print("self.letVarName:", self.letVarName)
@@ -720,13 +725,17 @@ class CompilationEngine:
         #     self.vmWriter.writePush(letKind, self.classSymbolTable.indexOf(self.letVarName))
 
         if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "[":
+            print("before")
             self.isArray = True
+            print("self.letFlag1", self.letFlag)
             self.compileExpression()
             self.vmWriter.writePop("temp", 0)
             self.vmWriter.writePop("pointer", 1)
             self.vmWriter.writePush("temp", 0)
             self.vmWriter.writePop("that", 0)
         else:
+            print("after")
+            self.letFlag = True
             self.jackTokenizer.advance()
             self.jackTokenizer.advance()
             self.compileExpression()
@@ -867,6 +876,8 @@ class CompilationEngine:
                 self.vmWriter.writeArithmetic(exp[0])
             elif exp[0] == "&amp;":
                 self.vmWriter.writeArithmetic(exp[0])
+            elif exp[0] == "-":
+                self.vmWriter.writeArithmetic(exp[0])
             elif exp[0] == "true":
                 self.vmWriter.writePush("constant", 1)
                 self.vmWriter.writeArithmetic("neg")
@@ -918,7 +929,7 @@ class CompilationEngine:
             # self.outputFile.write(f"<expression>\n")
             compiledTerm = self.compileTerm()
             print("compiledTerm:", compiledTerm)
-            if self.unaryOp == True:
+            if self.unaryOp == True and not isinstance(compiledTerm, int):
                 for term in compiledTerm:
                     print("term:", term)
                     localArray.append(term)
@@ -949,6 +960,9 @@ class CompilationEngine:
                         elif self.jackTokenizer.symbol() == "|" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "(":
                             self.andOrSymbol = "or"
                     whileTrue = True
+                    if self.jackTokenizer.symbol() == "-":
+                        self.codeWrite(localArray)
+                        localArray = []
                     # if self.opExp:
                     #     # call codeWrite here
                     #     self.codeWrite(self.opExp)
@@ -1004,19 +1018,41 @@ class CompilationEngine:
     def compileTerm(self):
         # self.outputFile.write(f"<term>\n")
         if self.jackTokenizer.tokenType() == "IDENTIFIER" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "[":
-            self.vmWriter.writePush("local", self.subSymbolTable.indexOf(self.jackTokenizer.identifier()))
+            if self.subSymbolTable.kindOf(self.jackTokenizer.identifier()) == "arg":
+                self.vmWriter.writePush("argument", self.subSymbolTable.indexOf(self.jackTokenizer.identifier()))
+            else:
+                self.vmWriter.writePush("local", self.subSymbolTable.indexOf(self.jackTokenizer.identifier()))
             self.jackTokenizer.advance()
             self.jackTokenizer.advance()
             self.compileExpression()
             self.vmWriter.writeArithmetic("+")
-            if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == ";":
+
+            print("flagTrue?", self.letFlag)
+            if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != "=":
                 self.vmWriter.writePop("pointer", 1)
-                self.thatFlag = True
+                self.vmWriter.writePush("that", 0)
+                self.letFlag = False
+
+            # if self.letFlag == True:
+            #     self.vmWriter.writePop("pointer", 1)
+            #     self.vmWriter.writePush("that", 0)
+            #     self.letFlag = False
+                # self.thatFlag = True
+
             print("afterThat", self.jackTokenizer.result[self.jackTokenizer.current_token + 1])
-            if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != ";":
+            if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == "=" or self.jackTokenizer.result[self.jackTokenizer.current_token + 1] == ";":
+                print("thisdidit")
+                self.letFlag = True
+
+            if self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != ";" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != "]" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != ")" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != "+" and self.jackTokenizer.result[self.jackTokenizer.current_token + 1] != "*":
                 self.jackTokenizer.advance()
                 self.jackTokenizer.advance()
                 self.compileExpression()
+
+            # self.vmWriter.writePop("temp", 0)
+            # self.vmWriter.writePop("pointer", 1)
+            # self.vmWriter.writePush("temp", 0)
+            # self.vmWriter.writePop("that", 0)
             # kind = self.subSymbolTable.kindOf(self.jackTokenizer.identifier())
             # if kind in ["arg", "var"]:
             #     pass
@@ -1053,7 +1089,10 @@ class CompilationEngine:
             # else:
             #     pass
                 # self.outputFile.write(f"<identifier> {self.jackTokenizer.identifier()} </identifier><type> {self.classSymbolTable.typeOf(self.jackTokenizer.identifier())} </type><kind> {self.classSymbolTable.kindOf(self.jackTokenizer.identifier())} </kind><index> {self.classSymbolTable.indexOf(self.jackTokenizer.identifier())} </index>\n")
-            
+            if self.classSymbolTable.indexOf(className) != None:
+                    if self.classSymbolTable.kindOf(className) == "field":
+                        self.vmWriter.writePush("this", self.classSymbolTable.indexOf(className))
+
             self.jackTokenizer.advance()
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
             self.jackTokenizer.advance()
@@ -1148,8 +1187,13 @@ class CompilationEngine:
             print("bore", self.jackTokenizer.identifier())
             return self.jackTokenizer.identifier()
         if self.jackTokenizer.tokenType() == "KEYWORD":
+            print("keywordPrint", self.jackTokenizer.keyWord())
             if self.current_sub_kind != "constructor":
                 return self.jackTokenizer.keyWord()
+            elif self.jackTokenizer.keyWord() == "false" or self.jackTokenizer.keyWord() == "true":
+                return self.jackTokenizer.keyWord()
+            else:
+                pass
             # self.outputFile.write(f"<keyword> {self.jackTokenizer.keyWord()} </keyword>\n")
         if self.jackTokenizer.tokenType() == "SYMBOL" and self.jackTokenizer.symbol() == "(":
             # self.outputFile.write(f"<symbol> {self.jackTokenizer.symbol()} </symbol>\n")
@@ -1288,6 +1332,9 @@ directory = sys.argv[1]
 files = [file for file in os.listdir(directory) if file.endswith('.jack')]
 directory_name = os.path.basename(os.path.normpath(directory))
 directory_path = os.path.join(directory, directory_name)
+
+if "PongGame.jack" in files:
+    files.append(files.pop(files.index("PongGame.jack")))
 
 if "Main.jack" in files:
     files.append(files.pop(files.index("Main.jack")))
