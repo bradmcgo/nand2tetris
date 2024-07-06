@@ -1,0 +1,150 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Math.jack
+/**
+ *  A library of commonly used mathematical functions.
+ *  All functions runs in O(n), where n is the number of bits used
+ *  for representing a two's complement integer value (16 in the Hack computer). 
+ *  Note: Jack compilers implement multiplication and division
+ *  using calls to OS functions in this class.
+ */
+class Math {
+    static int n;             // Number of bits used for representing a two's complement integer
+    static Array powersOfTwo; // Stores 2^0, 2^1, 2^2,..., 2^(n-1)
+
+    // Initializes the Math library.
+    function void init() {
+        let powersOfTwo = Array.new(16);
+
+        let powersOfTwo[0] = 1;         // 2^0
+        let powersOfTwo[1] = 2;         // 2^1
+        let powersOfTwo[2] = 4;         // 2^2
+        let powersOfTwo[3] = 8;         // 2^3
+        let powersOfTwo[4] = 16;        // 2^4
+        let powersOfTwo[5] = 32;        // 2^5
+        let powersOfTwo[6] = 64;        // 2^6
+        let powersOfTwo[7] = 128;       // 2^7
+        let powersOfTwo[8] = 256;       // 2^8
+        let powersOfTwo[9] = 512;       // 2^9
+        let powersOfTwo[10] = 1024;     // 2^10
+        let powersOfTwo[11] = 2048;     // 2^11
+        let powersOfTwo[12] = 4096;     // 2^12
+        let powersOfTwo[13] = 8192;     // 2^13
+        let powersOfTwo[14] = 16384;    // 2^14
+        let powersOfTwo[15] = 16384 + 16384;    // 2^15
+        return;
+    }
+
+    function boolean bit(int x, int i) {
+        var int mask;
+        var boolean result;
+        let mask = powersOfTwo[i];
+        if ((x & mask) > 0) {
+            let result = true;
+        } else {
+            let result = false;
+        }
+        return result;
+    }
+
+    /** Returns the product of x and y. 
+     *  When a Jack compiler detects the multiplication operator '*'
+     *  in an expression, it handles it by invoking this method. 
+     *  Thus, in Jack, x * y and Math.multiply(x,y) return the same value. */
+    function int multiply(int x, int y) {
+        var int sum, shiftedx, i;
+        var boolean bitAnswer;
+        let sum = 0;
+        let shiftedx = x;
+        let i = 0;
+
+        while (i < 16) {
+            let bitAnswer = Math.bit(y, i);
+            if (bitAnswer) {
+                let sum = sum + shiftedx;
+            }
+            let shiftedx = shiftedx + shiftedx;
+            let i = i + 1;
+        }
+        return sum;
+    }
+
+    /** Returns the integer part of x / y.
+     *  When a Jack compiler detects the division operator '/'
+     *  an an expression, it handles it by invoking this method.
+     *  Thus, x/y and Math.divide(x,y) return the same value. */
+    function int divide(int x, int y) {
+        var int q, answer;
+        var boolean isNeg;
+
+        if ((y < 0) | (x < 0)) {
+            let isNeg = true;
+        } else {
+            let isNeg = false;
+        }
+        if (isNeg) {
+            let x = Math.abs(x);
+            let y = Math.abs(y);
+        }
+        if (y > x) {
+            return 0;
+        }
+        let q = Math.divide(x, y + y);
+        if ((y + y) < 0) {
+            return 0;
+        }
+        if ((x - 2 * q * y) < y) {
+            let answer = q + q;
+        } else {
+            let answer = q + q + 1;
+        }
+        if (isNeg) {
+            return -answer;
+        } else {
+            return answer;
+        }
+    }
+
+    /** Returns the integer part of the square root of x. */
+    function int sqrt(int x) {
+        var int y, j, yPlus2J;
+        let y = 0;
+        let j = 7;
+        while (j >= 0) {
+            let yPlus2J = y + powersOfTwo[j];
+            if (((yPlus2J * yPlus2J) <= x) & ((yPlus2J * yPlus2J) > 0)) {
+                let y = yPlus2J;
+            }
+            let j = j - 1;
+        }
+        return y;
+    }
+
+    /** Returns the greater value. */
+    function int max(int a, int b) {
+        if (a > b) {
+            return a;
+        } else {
+            return b;
+        }
+    }
+
+    /** Returns the smaller value. */
+    function int min(int a, int b) {
+        if (a < b) {
+            return a;
+        } else {
+            return b;
+        }
+    }
+
+    /** Returns the absolute value of x. */
+    function int abs(int x) {
+        if (x < 0) {
+            return -x;
+        } else {
+            return x;
+        }
+    }
+}
