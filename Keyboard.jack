@@ -9,6 +9,7 @@ class Keyboard {
 
     /** Initializes the keyboard. */
     function void init() {
+        return;
     } 
 
     /**
@@ -32,18 +33,50 @@ class Keyboard {
      * F1 - F12 = 141 - 152
      */
     function char keyPressed() {
+        var int charCode;
+        let charCode = Memory.peek(24576);
+
+        return charCode;
     }
 
     /**	Waits until a key is pressed on the keyboard and released,
      *  then echoes the key to the screen, and returns the character 
      *  of the pressed key. */
     function char readChar() {
+        var int i, j, c;
+        let i = 0;
+        let j = 0;
+        
+        while (Keyboard.keyPressed() = 0) {}
+        let c = Keyboard.keyPressed();
+        while (~(Keyboard.keyPressed() = 0)) {}
+        do Output.printChar(c);
+        return c;
     }
 
     /**	Displays the message on the screen, reads from the keyboard the entered
      *  text until a newline character is detected, echoes the text to the screen,
      *  and returns its value. Also handles user backspaces. */
     function String readLine(String message) {
+        var int c;
+        var String str;
+        let str = String.new(100);
+        do Output.printString(message);
+
+        while (true) {
+            let c = Keyboard.readChar();
+            if (c = String.newLine()) {
+                do Output.println();
+                return str;
+            }
+            if (c = String.backSpace()) {
+                do str.eraseLastChar();
+            }
+            else {
+                do str.appendChar(c);
+            }
+        }
+        return str;
     }   
 
     /** Displays the message on the screen, reads from the keyboard the entered
@@ -51,5 +84,9 @@ class Keyboard {
      *  and returns its integer value (until the first non-digit character in the
      *  entered text is detected). Also handles user backspaces. */
     function int readInt(String message) {
+        var String str;
+        let str = Keyboard.readLine(message);
+
+        return str.intValue();
     }
 }
